@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calculator Chat</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #0a0a0a;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .phone {
+    width: 100%;
+    max-width: 420px;
+    height: 100vh;
+    max-height: 800px;
+    background: #111b21;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Header */
+  .header {
+    background: #202c33;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 1px solid #2a3942;
+    flex-shrink: 0;
+  }
+
+  .avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00a884, #005c4b);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .header-info { flex: 1; }
+  .header-name { color: #e9edef; font-size: 16px; font-weight: 600; }
+  .header-status { color: #8696a0; font-size: 12px; margin-top: 2px; display: flex; align-items: center; gap: 6px; }
+
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: #8696a0;
+    flex-shrink: 0;
+    transition: background 0.3s;
+  }
+  .status-dot.online { background: #00a884; animation: pulse 2s infinite; }
+
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  /* Connection banner */
+  .conn-banner {
+    background: #1a2a22;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #2a3942;
+    flex-shrink: 0;
+  }
+  .conn-banner input {
+    flex: 1;
+    background: #2a3942;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #e9edef;
+    font-size: 13px;
+    outline: none;
+    min-width: 0;
+  }
+  .conn-banner input::placeholder { color: #8696a0; }
+  .conn-banner button {
+    background: #00a884;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .conn-banner button:hover { background: #008f72; }
+
+  /* Messages */
+  .messages {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    background: #0b141a;
+    background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23182229' fill-opacity='0.6'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+  }
+  .messages::-webkit-scrollbar { width: 3px; }
+  .messages::-webkit-scrollbar-thumb { background: #2a3942; border-radius: 2px; }
+
+  .date-sep { text-align: center; margin: 8px 0; }
+  .date-sep span {
+    background: #182229; color: #8696a0;
+    font-size: 11px; padding: 4px 12px; border-radius: 8px;
+  }
+
+  .msg-wrap { display: flex; flex-direction: column; margin-bottom: 2px; }
+  .msg-wrap.from-calc { align-items: flex-end; }
+  .msg-wrap.from-me   { align-items: flex-start; }
+
+  .sender-label { font-size: 11px; color: #8696a0; margin-bottom: 2px; padding: 0 4px; }
+
+  .bubble {
+    max-width: 78%;
+    padding: 8px 12px 4px;
+    font-size: 14px;
+    line-height: 1.5;
+    word-break: break-word;
+    position: relative;
+  }
+
+  .from-calc .bubble {
+    background: #005c4b;
+    color: #e9edef;
+    border-radius: 8px 0 8px 8px;
+  }
+  .from-me .bubble {
+    background: #202c33;
+    color: #e9edef;
+    border-radius: 0 8px 8px 8px;
+  }
+  .from-calc.result .bubble {
+    background: #1a3a2a;
+    border-left: 3px solid #00a884;
+  }
+
+  .bubble-time {
+    font-size: 10px; color: #8696a0;
+    margin-top: 3px;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .from-calc .bubble-time { justify-content: flex-end; }
+
+  /* tick icon */
+  .tick { color: #53bdeb; font-size: 11px; }
+
+  /* Tag badge for results */
+  .result-tag {
+    display: inline-block;
+    font-size: 10px;
+    background: #005c4b;
+    color: #00a884;
+    border-radius: 4px;
+    padding: 1px 6px;
+    margin-bottom: 4px;
+  }
+
+  /* Input area */
+  .input-area {
+    background: #202c33;
+    padding: 8px 12px;
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    border-top: 1px solid #2a3942;
+    flex-shrink: 0;
+  }
+
+  .input-box {
+    flex: 1;
+    background: #2a3942;
+    border: none;
+    border-radius: 24px;
+    padding: 10px 16px;
+    color: #e9edef;
+    font-size: 15px;
+    font-family: inherit;
+    resize: none;
+    max-height: 100px;
+    outline: none;
+    line-height: 1.4;
+    direction: ltr;
+  }
+  .input-box::placeholder { color: #8696a0; }
+
+  .send-btn {
+    width: 44px; height: 44px;
+    border-radius: 50%;
+    background: #00a884;
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0; transition: background 0.2s;
+  }
+  .send-btn:hover { background: #008f72; }
+  .send-btn:active { transform: scale(0.95); }
+  .send-btn svg { width: 20px; height: 20px; fill: white; }
+  .send-btn:disabled { background: #2a3942; cursor: not-allowed; }
+
+  /* Scroll-to-bottom btn */
+  .scroll-btn {
+    position: absolute;
+    bottom: 70px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #00a884;
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 13px;
+    cursor: pointer;
+    display: none;
+    z-index: 10;
+  }
+
+  /* Toast */
+  .toast {
+    position: absolute;
+    top: 120px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #00a884;
+    color: white;
+    padding: 8px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    display: none;
+    z-index: 50;
+    white-space: nowrap;
+  }
+
+  @media (min-width: 421px) {
+    .phone { border-radius: 16px; height: 90vh; }
+  }
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="avatar">📟</div>
+    <div class="header-info">
+      <div class="header-name">الحاسبة</div>
+      <div class="header-status">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">غير متصل</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Connection banner -->
+  <div class="conn-banner" id="connBanner">
+    <input type="text" id="tokenInput" placeholder="أدخل Auth Token" value="einuXYLunVMqfRkKhGbvRleFkXNJobRT">
+    <button onclick="connect()">🔗 اتصال</button>
+  </div>
+
+  <!-- Messages -->
+  <div class="messages" id="messages">
+    <div class="date-sep"><span>اليوم</span></div>
+  </div>
+
+  <!-- Scroll to bottom -->
+  <button class="scroll-btn" id="scrollBtn" onclick="scrollToBottom()">⬇ رسالة جديدة</button>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Input -->
+  <div class="input-area">
+    <textarea class="input-box" id="msgInput"
+      placeholder="اكتب رسالة للحاسبة..."
+      rows="1"
+      oninput="autoResize(this)"
+      onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendMsg();}">
+    </textarea>
+    <button class="send-btn" id="sendBtn" onclick="sendMsg()" disabled>
+      <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+    </button>
+  </div>
+
+</div>
+
+<script>
+  var TOKEN   = "einuXYLunVMqfRkKhGbvRleFkXNJobRT";
+  var BASE    = "https://sgp1.blynk.cloud/external/api";
+  var POLL_MS = 1500;
+
+  // track last values so we don't show duplicates
+  var lastV2 = null;
+  var lastV3 = null;
+  var pollTimer = null;
+  var connected = false;
+  var userScrolled = false;
+
+  // ── Helpers ──────────────────────────────────────────
+  function nowTime() {
+    var d = new Date();
+    return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+  }
+
+  function autoResize(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+  }
+
+  function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(function(){ t.style.display = 'none'; }, 2500);
+  }
+
+  function scrollToBottom() {
+    var msgs = document.getElementById('messages');
+    msgs.scrollTop = msgs.scrollHeight;
+    document.getElementById('scrollBtn').style.display = 'none';
+    userScrolled = false;
+  }
+
+  // detect if user scrolled up manually
+  document.getElementById('messages').addEventListener('scroll', function() {
+    var msgs = this;
+    var atBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 40;
+    userScrolled = !atBottom;
+    document.getElementById('scrollBtn').style.display = (userScrolled ? 'block' : 'none');
+  });
+
+  // ── Add message bubble ────────────────────────────────
+  function addMsg(text, from, isResult) {
+    var msgs = document.getElementById('messages');
+    var atBottom = msgs.scrollHeight - msgs.scrollTop - msgs.clientHeight < 40;
+
+    var wrap = document.createElement('div');
+    wrap.className = 'msg-wrap ' + (from === 'calc' ? 'from-calc' : 'from-me') + (isResult ? ' result' : '');
+
+    var label = document.createElement('div');
+    label.className = 'sender-label';
+    label.textContent = from === 'calc' ? '📟 الحاسبة' : '📱 أنت';
+
+    var bubble = document.createElement('div');
+    bubble.className = 'bubble';
+
+    if(isResult) {
+      var tag = document.createElement('div');
+      tag.className = 'result-tag';
+      tag.textContent = '🔢 نتيجة';
+      bubble.appendChild(tag);
+    }
+
+    var textNode = document.createElement('div');
+    textNode.textContent = text;
+    bubble.appendChild(textNode);
+
+    var timeRow = document.createElement('div');
+    timeRow.className = 'bubble-time';
+    timeRow.textContent = nowTime();
+    if(from === 'me') {
+      var tick = document.createElement('span');
+      tick.className = 'tick';
+      tick.textContent = '✓✓';
+      timeRow.appendChild(tick);
+    }
+
+    wrap.appendChild(label);
+    wrap.appendChild(bubble);
+    wrap.appendChild(timeRow);
+    msgs.appendChild(wrap);
+
+    if(atBottom && !userScrolled) {
+      msgs.scrollTop = msgs.scrollHeight;
+    } else {
+      document.getElementById('scrollBtn').style.display = 'block';
+    }
+  }
+
+  // ── Status ────────────────────────────────────────────
+  function setStatus(online) {
+    connected = online;
+    var dot  = document.getElementById('statusDot');
+    var text = document.getElementById('statusText');
+    var btn  = document.getElementById('sendBtn');
+    if(online) {
+      dot.className = 'status-dot online';
+      text.textContent = 'متصل الآن';
+      btn.disabled = false;
+    } else {
+      dot.className = 'status-dot';
+      text.textContent = 'جارٍ الاتصال...';
+      btn.disabled = true;
+    }
+  }
+
+  // ── Connect ───────────────────────────────────────────
+  function connect() {
+    var inp = document.getElementById('tokenInput').value.trim();
+    if(inp) TOKEN = inp;
+    document.getElementById('connBanner').style.display = 'none';
+    setStatus(false);
+
+    fetch(BASE + '/isHardwareConnected?token=' + TOKEN)
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data === true) {
+          setStatus(true);
+          addMsg('✅ متصل بالحاسبة — يمكنك البدء بالمحادثة', 'calc', false);
+          // Read current values so we don't show old data as new
+          return Promise.all([
+            fetch(BASE + '/get?token=' + TOKEN + '&v2').then(function(r){return r.text();}),
+            fetch(BASE + '/get?token=' + TOKEN + '&v3').then(function(r){return r.text();})
+          ]).then(function(vals){
+            lastV2 = parseBlynk(vals[0]);
+            lastV3 = parseBlynk(vals[1]);
+            startPolling();
+          });
+        } else {
+          setStatus(false);
+          addMsg('⚠️ الحاسبة غير متصلة — تأكد من تشغيل Wokwi وانتظر...', 'calc', false);
+          setTimeout(tryReconnect, 5000);
+        }
+      })
+      .catch(function(){
+        setStatus(false);
+        addMsg('⚠️ خطأ في الاتصال بـ Blynk — سيُعاد المحاولة...', 'calc', false);
+        setTimeout(tryReconnect, 5000);
+      });
+  }
+
+  function tryReconnect() {
+    fetch(BASE + '/isHardwareConnected?token=' + TOKEN)
+      .then(function(r){ return r.json(); })
+      .then(function(data){
+        if(data === true) {
+          setStatus(true);
+          addMsg('✅ تم الاتصال بالحاسبة', 'calc', false);
+          Promise.all([
+            fetch(BASE + '/get?token=' + TOKEN + '&v2').then(function(r){return r.text();}),
+            fetch(BASE + '/get?token=' + TOKEN + '&v3').then(function(r){return r.text();})
+          ]).then(function(vals){
+            lastV2 = parseBlynk(vals[0]);
+            lastV3 = parseBlynk(vals[1]);
+            startPolling();
+          });
+        } else {
+          setTimeout(tryReconnect, 5000);
+        }
+      })
+      .catch(function(){ setTimeout(tryReconnect, 5000); });
+  }
+
+  // ── Parse Blynk response ──────────────────────────────
+  function parseBlynk(raw) {
+    var val = raw.trim();
+    try {
+      var p = JSON.parse(val);
+      if(Array.isArray(p)) val = p[0];
+      else val = String(p);
+    } catch(e) {}
+    val = val.replace(/^"|"$/g, '');
+    if(val === 'null' || val === '') return null;
+    return val;
+  }
+
+  // ── Polling: V2 (رسائل من الحاسبة) + V3 (نتائج) ────
+  function startPolling() {
+    if(pollTimer) clearInterval(pollTimer);
+
+    pollTimer = setInterval(function(){
+      // ── V2: رسائل الدردشة من الحاسبة ──
+      fetch(BASE + '/get?token=' + TOKEN + '&v2')
+        .then(function(r){ return r.text(); })
+        .then(function(raw){
+          var val = parseBlynk(raw);
+          if(val && val !== lastV2) {
+            lastV2 = val;
+            addMsg(val, 'calc', false);
+          }
+        })
+        .catch(function(){});
+
+      // ── V3: نتائج الحسابات ──
+      fetch(BASE + '/get?token=' + TOKEN + '&v3')
+        .then(function(r){ return r.text(); })
+        .then(function(raw){
+          var val = parseBlynk(raw);
+          if(val && val !== lastV3) {
+            lastV3 = val;
+            addMsg(val, 'calc', true);
+          }
+        })
+        .catch(function(){
+
+          // Connection may have dropped — check
+          fetch(BASE + '/isHardwareConnected?token=' + TOKEN)
+            .then(function(r){ return r.json(); })
+            .then(function(data){
+              if(!data && connected) {
+                setStatus(false);
+                addMsg('⚠️ انقطع الاتصال — جارٍ إعادة الاتصال...', 'calc', false);
+                clearInterval(pollTimer);
+                setTimeout(tryReconnect, 3000);
+              }
+            }).catch(function(){});
+        });
+    }, POLL_MS);
+  }
+
+  // ── Send message to calculator (V0) ──────────────────
+  function sendMsg() {
+    var input = document.getElementById('msgInput');
+    var msg = input.value.trim();
+    if(!msg) return;
+    if(!connected) { showToast('⚠️ غير متصل بالحاسبة'); return; }
+
+    addMsg(msg, 'me', false);
+    input.value = '';
+    input.style.height = 'auto';
+
+    fetch(BASE + '/update?token=' + TOKEN + '&v0=' + encodeURIComponent(msg))
+      .then(function(r){
+        if(!r.ok) throw new Error();
+      })
+      .catch(function(){
+        showToast('⚠️ فشل الإرسال، حاول مجدداً');
+      });
+  }
+
+  // ── Auto connect ──────────────────────────────────────
+  window.onload = function() {
+    connect();
+  };
+</script>
+</body>
+</html>
